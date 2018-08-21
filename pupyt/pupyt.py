@@ -1,4 +1,3 @@
-from functools import reduce
 import csv
 from copy import deepcopy
 from collections import Iterable
@@ -45,13 +44,6 @@ def flatten_pupyt_groups(obj):
 
 
 class Table(dict):
-    def __init__(self, dictionary):
-        dict.__init__(self, {k: Column(v) for k, v in dictionary.items()})
-
-    def __setitem__(self, key, value):
-        assert type(key) is str
-        super(Table, self).__setitem__(key, Column(value))
-
     def __getitem__(self, key):
         if isinstance(key, slice):
             if key.start == key.stop:
@@ -104,7 +96,6 @@ class Table(dict):
         :type apply_type: str can be r 'r' or 'g' for 'row' or 'group'. by row will return a list,
             by group returns an atomic
         """
-        #assert columns or raw_inputs
         inputs = [self[col] for col in columns]
         if apply_type == 'g':
             return funct(*inputs)
@@ -122,7 +113,7 @@ class Table(dict):
     def de_dup(self):
         seen = []
         delete = []
-        for i, row in enumerate(self.iterrows()):
+        for i, row in enumerate(self.iter_rows()):
             if row in seen:
                 delete.append(i)
             else:
@@ -195,15 +186,15 @@ class Table(dict):
                 groups[x][c].append(v)
         for key, table in groups.items():
             groups[key] = Table(table).group_by(columns[1:])
-        return groups
+        return GroupedTable(groups)
 
-    def iterrows(self, as_table=False):
+    def iter_rows(self, as_table=False):
         for i in range(self.nrow()):
             yield self.irow(i, as_table=as_table)
 
     def irow(self, i, as_table=False):
         return [x[i] for x in self.values()] if as_table is False else \
-            Table({k: [self[k][i]] for k in self.keys()})
+            Table({k: self[k][i] for k in self.keys()})
 
     def mutate(self, column_name, funct, function_input):
         inputs = [self[_input_] for _input_ in function_input]
@@ -224,13 +215,6 @@ class Table(dict):
         self.verify_integrity()
         return len(self[list(self.keys())[0]])
 
-    def ProperName(self, columns):
-        if type(columns) is list:
-            for column in columns:
-                self[column] = [x.strip()[0].upper() + x.strip()[1:].lower() if x else None for x in self[column]]
-        else:
-            self[columns] = [x.strip()[0].upper() + x.strip()[1:].lower() if x else None for x in self[column]]
-
     def rename(self, old_name, new_name):
         if old_name in self.keys():
             self[new_name] = self[old_name]
@@ -243,7 +227,7 @@ class Table(dict):
         with open(name, 'w', newline='', encoding=encoding) as csv_file:
             writer = csv.writer(csv_file)
             writer.writerow(self.keys())
-            for row in self.iterrows():
+            for row in self.iter_rows():
                 writer.writerow(row)
 
     def select_max(self, column):
@@ -263,6 +247,11 @@ class Table(dict):
                 delcols.append(col)
         for col in delcols:
             del self[col]
+
+    def set_row(self, index, data: list):
+        assert len(data) == len(self.keys())
+        for i, k in enumerate(self.keys()):
+            self[k][index] = data[i]
 
     def subset(self, funct, columns):
         inputs = [self[col] for col in columns]
@@ -343,24 +332,46 @@ class Table(dict):
                                zip(*[self.irow(i) for i, val in enumerate(self[column]) if funct(val) is True]))))
         return table if table != {} else self.empty_keys()
 
+    # APPLY FUNCTIONS ======================
+    @staticmethod
+    def apply(table, margin, f):
+        if margin == 1:
+            for row_data in table.iter_rows(False):
+                yield f(row_data)
+        if margin == 2:
+            for column_data in table.values():
+                yield f(column_data)
 
-class GroupHierarchy(Table):
-    def __init__(self, table, groups):
-        self.table = table
-        self.groups = groups
-        Table.__init__(self, self.set_structure(self.groups, Table(table)))
-        pass
+class GroupedTable(Table):
+    def flatten(self):
+        return self.flatten_obj(self)
 
-    def set_structure(self, groups, data: Table):
+    @staticmethod
+    def flatten_obj(obj):
+        items = []
+        for k, v in obj.items():
+            if type(v) is dict or type(v) is Table:
+                items.append(flatten_pupyt_groups(v))
+            else:
+                return obj
+        vals = list(zip(*[list(i.values()) for i in items]))
+        for i, val in enumerate(vals):
+            vals[i] = [item for sublist in val for item in sublist]
+        cols = list(zip(*[list(i.keys()) for i in items]))
+        assert all([True if len(set(c)) == 1 else False for c in cols])
+        cols = [c[0] for c in cols]
+        table = Table(dict(zip(cols, vals)))
+        table.verify_integrity()
+        return table
 
-        if groups:
-            name = groups[0]
-            group_values = set(self.table[name])
-            datas = [deepcopy(data) for _ in range(len(group_values))]
-            structure = Group({val: self.set_structure(groups[1:], datas[i].filter(lambda x: x == val, [name]))
-                               for i, val in enumerate(group_values)})
-            return structure
-        return Table(data)
+
+class VectorizedTable(Table):
+    def __init__(self, dictionary):
+        dict.__init__(self, {k: Column(v) for k, v in dictionary.items()})
+
+    def __setitem__(self, key, value):
+        assert type(key) is str
+        super(Table, self).__setitem__(key, Column(value))
 
 
 class Column(list):
@@ -422,23 +433,3 @@ class Column(list):
 
     def cast(self, funct):
         return Column([x.funct() for x in self])
-
-
-class Group(Table):
-    def __init__(self, table, leaf=False):
-        Table.__init__(self, table)
-        self.leaf = leaf
-
-    def agg(self, funct, columns, col_names=None):
-        if col_names is not None:
-            assert len(columns) == len(col_names)
-        col_names = zip(columns, col_names) if col_names else zip(columns, columns)
-        for col, name in col_names:
-            self.aggregate[name] = list(map(lambda t: funct(t[col]), [t for t in self.table_generator(self)]))
-
-    def table_generator(self, obj):
-        for k, v in obj.items():
-            if type(v) is dict:
-                yield from self.table_generator(v)
-            else:
-                yield(v)
