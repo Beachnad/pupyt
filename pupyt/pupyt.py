@@ -74,6 +74,6 @@ class PuPyT(dict):
             if method == 'extend':
                 self[k].extend(other[k])
         return PuPyT(self)
-    
+
     def xxx(self):
         return 'xxx'
