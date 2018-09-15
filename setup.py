@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="pupyt",
-    version="0.0.1",
+    version="0.0.2",
     author="Danny Beachnau",
     author_email="DannyBeachnau@gmail.com",
     description="pure python table",
