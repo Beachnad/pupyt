@@ -1,3 +1,3 @@
-import pupyt
+from pupyt.pupyt import *
 
-name='pupyt'
+name = 'pupyt'
