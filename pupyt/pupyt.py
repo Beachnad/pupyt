@@ -26,14 +26,26 @@ class PuPyT(list):
         else:
             super(PuPyT, self).__setitem__(key, value)
 
-    def group_by(self, target: str):
-        return PuPyG({k: PuPyT(list(v)) for k, v in groupby(self.sort_on(target), key=lambda x: x[target])})
+    def __delitem__(self, key):
+        if type(key) is str:
+            for r in self:
+                del(r[key])
+        else:
+            super(PuPyT, self).__delitem__(key)
 
-    def _group_by(self, target):
-        return PuPyG({k: PuPyT(list(v)) for k, v in groupby(self.sort_on(target), key=lambda x: x[target])})
+    def group_by(self, targets):
+        targets = targets if type(targets) is list else list(targets)
+        return self._group_by(targets, 0)
+
+    def _group_by(self, targets, i):
+        if len(targets) - 1 > i:
+            return PuPyG({k: PuPyT(list(v))._group_by(targets, i + 1) for k, v in groupby(self.sort_on(targets[i]),
+                                                                                          key=lambda x: x[targets[i]])})
+        else:
+            return self._group_by(targets[i], i)
 
     def sort_on(self, target):
-        sorted_index = sorted(range(len(self[target])),key=self[target].__getitem__)
+        sorted_index = sorted(range(len(self[target])), key=self[target].__getitem__)
         return PuPyT([self[ind] for ind in sorted_index])
 
 
