@@ -44,6 +44,16 @@ class PuPyT(list):
         else:
             return self._group_by(targets[i], i)
 
+    def keys(self):
+        return list(self[0].keys())
+
+    def values(self):
+        return [list(r.values()) for r in self]
+
+    def items(self):
+        for k, v in zip(self.keys(), self.values()):
+            yield k, v
+
     def sort_on(self, target):
         sorted_index = sorted(range(len(self[target])), key=self[target].__getitem__)
         return PuPyT([self[ind] for ind in sorted_index])
@@ -56,8 +66,13 @@ class PuPyT(list):
         assert all(len(v) == n_row for v in dict.values())
         return PuPyT([{k: v[i] for k, v in dict.items()} for i in range(n_row)])
 
+    def as_dict(self):
+        return dict(self.items())
+
 
 class PuPyG(dict):
     def __init__(self, dictionary):
         dict.__init__(self, dictionary)
+
+
 
