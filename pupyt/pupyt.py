@@ -1,13 +1,15 @@
 from itertools import groupby
-from collections import OrderedDict
 
 
 class PuPyT(list):
+    @property
+    def nrow(self):
+        return len(self)
 
     def __init__(self, data):
         if type(data) is dict:
             list.__init__(self, PuPyT.from_dict(data))
-        elif type(data) is list:
+        elif type(data) in (list, PuPyT):
             list.__init__(self, data)
         else:
             raise ValueError
@@ -39,20 +41,19 @@ class PuPyT(list):
 
     def _group_by(self, targets, i):
         if len(targets) - 1 > i:
-            return PuPyG({k: PuPyT(list(v))._group_by(targets, i + 1) for k, v in groupby(self.sort_on(targets[i]),
-                                                                                          key=lambda x: x[targets[i]])})
+            return PuPyG({k: PuPyT(list(v))._group_by(targets, i + 1)
+                          for k, v in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])})
         else:
-            return self._group_by(targets[i], i)
+            return PuPyG({k: PuPyT(list(v)) for k, v in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])})
 
     def keys(self):
-        return list(self[0].keys())
+        return tuple(self[0].keys())
 
     def values(self):
-        return [list(r.values()) for r in self]
+        return [list(vals) for vals in (zip(*[r.values() for r in self]))]
 
     def items(self):
-        for k, v in zip(self.keys(), self.values()):
-            yield k, v
+        return [(k, v) for k, v in zip(self.keys(), self.values())]
 
     def sort_on(self, target):
         sorted_index = sorted(range(len(self[target])), key=self[target].__getitem__)
@@ -69,10 +70,15 @@ class PuPyT(list):
     def as_dict(self):
         return dict(self.items())
 
+    def union(self, other):
+        other = other if type(other) is PuPyT else PuPyT(other)
+        assert set(self.keys()) == set(other.keys())
+        self.extend(other)
+        return self
+
 
 class PuPyG(dict):
     def __init__(self, dictionary):
         dict.__init__(self, dictionary)
-
 
 

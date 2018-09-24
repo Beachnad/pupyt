@@ -46,15 +46,16 @@ class TestPuPyT(TestCase):
             pupyt_test.group_by('c')
         )
 
+        "Perfomance tests."
         t0 = datetime.now()
-        t = pupyt_test_big.group_by('a')
+        pupyt_test_big.group_by('a')
         t1 = datetime.now()
-        print((t1-t0))
+        self.assertGreaterEqual(2, (t1 - t0).seconds)
 
         t0 = datetime.now()
-        t = pupyt_test_big.group_by(['c', 'a'])
+        pupyt_test_big.group_by(['c', 'a'])
         t1 = datetime.now()
-        print((t1 - t0))
+        self.assertGreaterEqual(5, (t1 - t0).seconds)
 
     def test_sort_on(self):
         self.assertEqual(pupyt_test, pupyt_test.sort_on('a'))
@@ -81,4 +82,24 @@ class TestPuPyT(TestCase):
              {'a': 3, 'b': 3, 'c': 1, 'd': 3}, {'a': 4, 'b': 4, 'c': 2, 'd': 2},
              {'a': 5, 'b': 5, 'c': 2, 'd': 1}],
             pupyt_test
+        )
+        
+    def test_dict_functions(self):
+        self.assertEqual(('a', 'b', 'c', 'd'), pupyt_test.keys())
+        self.assertEqual(
+            [[1, 2, 3, 4, 5],
+             [1, 2, 3, 4, 5],
+             [1, 1, 1, 2, 2],
+             [5, 4, 3, 2, 1]], pupyt_test.values())
+        self.assertEqual(
+            [('a', [1, 2, 3, 4, 5]),
+             ('b', [1, 2, 3, 4, 5]),
+             ('c', [1, 1, 1, 2, 2]),
+             ('d', [5, 4, 3, 2, 1])], pupyt_test.items()
+        )
+        self.assertEqual(
+            {'a': [1, 2, 3, 4, 5],
+             'b': [1, 2, 3, 4, 5],
+             'c': [1, 1, 1, 2, 2],
+             'd': [5, 4, 3, 2, 1]}, pupyt_test.as_dict()
         )
