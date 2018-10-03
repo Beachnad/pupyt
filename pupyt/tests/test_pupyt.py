@@ -1,4 +1,5 @@
 from pupyt import PuPyT
+from helper import starts_with
 from unittest import TestCase
 from datetime import datetime
 
@@ -19,8 +20,24 @@ big_test_data = {
     'c': rand_list(1000000, 5)
 }
 
+test_data_II = {
+    'a': [1, 2, None, 4, 5],
+    'b': ['a', 'b', 'c', 'd', None],
+    'c': [None, 1, None, 1, 2]
+}
+
+
+dict_test_dev = {
+    'name': ['alex', 'bob', 'charlie'],
+    'balance': [100, 200, 250],
+    'balloons': [0, 2, 1],
+    'X': [0, 0, 0]
+}
+
 pupyt_test = PuPyT(test_data)
 pupyt_test_big = PuPyT(big_test_data)
+pupyt_test_II = PuPyT(test_data_II)
+pupyt_test_dev = PuPyT(dict_test_dev)
 
 
 class TestPuPyT(TestCase):
@@ -50,12 +67,19 @@ class TestPuPyT(TestCase):
         t0 = datetime.now()
         pupyt_test_big.group_by('a')
         t1 = datetime.now()
-        self.assertGreaterEqual(2, (t1 - t0).seconds)
+        self.assertGreaterEqual(4, (t1 - t0).seconds)
 
         t0 = datetime.now()
         pupyt_test_big.group_by(['c', 'a'])
         t1 = datetime.now()
-        self.assertGreaterEqual(5, (t1 - t0).seconds)
+        print((t1 - t0).seconds)
+        self.assertGreaterEqual(8, (t1 - t0).seconds)
+
+        self.assertEqual(
+            {None: [{'a': 1, 'b': 'a', 'c': None}, {'a': None, 'b': 'c', 'c': None}],
+             1: [{'a': 2, 'b': 'b', 'c': 1}, {'a': 4, 'b': 'd', 'c': 1}],
+             2: [{'a': 5, 'b': None, 'c': 2}]},
+            pupyt_test_II.group_by(['c']))
 
     def test_sort_on(self):
         self.assertEqual(pupyt_test, pupyt_test.sort_on('a'))
@@ -103,3 +127,77 @@ class TestPuPyT(TestCase):
              'c': [1, 1, 1, 2, 2],
              'd': [5, 4, 3, 2, 1]}, pupyt_test.as_dict()
         )
+
+    def test_filter_family(self):
+        self.assertEqual(
+            [{'a': 3, 'b': 3, 'c': 1, 'd': 3},
+             {'a': 4, 'b': 4, 'c': 2, 'd': 2},
+             {'a': 5, 'b': 5, 'c': 2, 'd': 1}],
+            pupyt_test.filter_at(starts_with('a'), lambda x: x > 2))
+
+        self.assertEqual(
+            [{'X': 0, 'balance': 100, 'balloons': 0, 'name': 'alex'}],
+            pupyt_test_dev.filter_at(starts_with('bal'), lambda x: x in (100, 0, 250)))
+
+########################################################################################################################
+pupyt_test_sales = PuPyT({
+    'region': [1, 1, 1, 1, 2, 2, 2, 2],
+    'product': [1, 1, 2, 2, 1, 1, 2, 2],
+    'sales': [100, 50, 75, 90, 45, 235, 165, 20]
+})
+
+class TestDev(TestCase):
+    def test_mutate_at(self):
+        self.assertEqual(
+            [{'X': 0, 'balance': 1000, 'balloons': 0, 'name': 'alex'},
+             {'X': 0, 'balance': 2000, 'balloons': 20, 'name': 'bob'},
+             {'X': 0, 'balance': 2500, 'balloons': 10, 'name': 'charlie'}]
+            , pupyt_test_dev.mutate_at(starts_with('bal'), lambda x: x * 10))
+
+    def test_summarise(self):
+        output = pupyt_test.group_by(['c']).\
+            summarise(
+                a=lambda x: sum(x['a']),
+                b=lambda x: sum(x['b'])/x.nrow
+            )
+
+        self.assertEqual(
+            [{'a': 6, 'b': 2.0, 'c': 1},
+             {'a': 9, 'b': 4.5, 'c': 2}],
+            output)
+
+        region_sales = pupyt_test_sales.\
+            group_by(['region', 'product']).\
+            summarise(
+                total_sales=lambda t: sum(t['sales']),
+                avg_sales=  lambda t: sum(t['sales'])/t.nrow
+            )
+
+        self.assertEqual(
+            {1: [{'avg_sales': 75.0, 'product': 1, 'total_sales': 150},
+                 {'avg_sales': 82.5, 'product': 2, 'total_sales': 165}],
+             2: [{'avg_sales': 140.0, 'product': 1, 'total_sales': 280},
+                 {'avg_sales': 92.5, 'product': 2, 'total_sales': 185}]},
+            region_sales
+        )
+
+        total_sales = region_sales.\
+            summarise(
+                total_sales=lambda t: sum(t['total_sales']),
+                avg_sales=lambda t: sum(t['total_sales'])/t.nrow
+            )
+
+        self.assertEqual(
+            [{'avg_sales': 157.5, 'region': 1, 'total_sales': 315},
+             {'avg_sales': 232.5, 'region': 2, 'total_sales': 465}],
+            total_sales
+        )
+
+    def test_summarise_all(self):
+        summary_output = pupyt_test_sales.\
+            group_by(['region', 'product']).\
+            _summarise_all(
+                avg=lambda x: sum(x)/len(x)
+            )
+        print(summary_output)
+
