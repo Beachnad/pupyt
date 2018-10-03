@@ -58,8 +58,8 @@ class TestPuPyT(TestCase):
 
     def test_group_by(self):
         self.assertEqual(
-            {1: [{'a': 1, 'b': 1, 'c': 1, 'd': 5}, {'a': 2, 'b': 2, 'c': 1, 'd': 4}, {'a': 3, 'b': 3, 'c': 1, 'd': 3}],
-             2: [{'a': 4, 'b': 4, 'c': 2, 'd': 2}, {'a': 5, 'b': 5, 'c': 2, 'd': 1}]},
+            {1: [{'a': 1, 'b': 1, 'd': 5}, {'a': 2, 'b': 2, 'd': 4}, {'a': 3, 'b': 3, 'd': 3}],
+             2: [{'a': 4, 'b': 4, 'd': 2}, {'a': 5, 'b': 5, 'd': 1}]},
             pupyt_test.group_by('c')
         )
 
@@ -76,9 +76,9 @@ class TestPuPyT(TestCase):
         self.assertGreaterEqual(8, (t1 - t0).seconds)
 
         self.assertEqual(
-            {None: [{'a': 1, 'b': 'a', 'c': None}, {'a': None, 'b': 'c', 'c': None}],
-             1: [{'a': 2, 'b': 'b', 'c': 1}, {'a': 4, 'b': 'd', 'c': 1}],
-             2: [{'a': 5, 'b': None, 'c': 2}]},
+            {None: [{'a': 1, 'b': 'a'}, {'a': None, 'b': 'c'}],
+             1: [{'a': 2, 'b': 'b'}, {'a': 4, 'b': 'd'}],
+             2: [{'a': 5, 'b': None}]},
             pupyt_test_II.group_by(['c']))
 
     def test_sort_on(self):
@@ -196,9 +196,53 @@ class TestDev(TestCase):
     def test_summarise_all(self):
         summary_output = pupyt_test_sales.\
             group_by(['region', 'product']).\
-            _summarise_all(
+            summarise_all(
                 avg=lambda x: sum(x)/len(x),
                 tot=lambda x: sum(x)
             )
-        print(summary_output)
 
+        self.assertEqual(
+            {1: [{'avg_sales': 75.0, 'product': 1, 'tot_sales': 150},
+                 {'avg_sales': 82.5, 'product': 2, 'tot_sales': 165}],
+             2: [{'avg_sales': 140.0, 'product': 1, 'tot_sales': 280},
+                 {'avg_sales': 92.5, 'product': 2, 'tot_sales': 185}]},
+            summary_output
+        )
+
+    def test_summarise_at(self):
+        summary_output = pupyt_test_sales.\
+            group_by(['region', 'product']).\
+            summarise_at(
+                starts_with('sal'),
+                tst_avg=lambda x: sum(x)/len(x),
+                tst_tot=lambda x: sum(x)
+            )
+
+        self.assertEqual(
+            {1: [{'tst_avg_sales': 75.0, 'product': 1, 'tst_tot_sales': 150},
+                 {'tst_avg_sales': 82.5, 'product': 2, 'tst_tot_sales': 165}],
+             2: [{'tst_avg_sales': 140.0, 'product': 1, 'tst_tot_sales': 280},
+                 {'tst_avg_sales': 92.5, 'product': 2, 'tst_tot_sales': 185}]},
+            summary_output
+        )
+
+        summary_output_ii = summary_output.\
+            summarise_at(
+                starts_with('tst'),
+                n=lambda x: len(x),
+                avg=lambda x: sum(x)/len(x)
+            )
+
+        self.assertEqual(
+            [{'avg_tst_avg_sales': 78.75,
+              'avg_tst_tot_sales': 157.5,
+              'n_tst_avg_sales': 2,
+              'n_tst_tot_sales': 2,
+              'region': 1},
+             {'avg_tst_avg_sales': 116.25,
+              'avg_tst_tot_sales': 232.5,
+              'n_tst_avg_sales': 2,
+              'n_tst_tot_sales': 2,
+              'region': 2}],
+            summary_output_ii
+        )

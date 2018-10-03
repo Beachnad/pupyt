@@ -197,29 +197,21 @@ class PuPyG(dict):
                 self[key] = fun(val)
         return self
 
+    ### SUMMARISE FUNCTION CLASS ###
     def summarise(self, **funs):
         return self.peal(lambda x: x._summarise(**funs))
 
-    def _summarise(self, **funs):
-        output = PuPyT([
-            {name: fun(table) for name, fun in funs.items()} for key, table in self.items()
-        ])
-        output[self.layer_name] = [k for k in self.keys()]
-
-        return output
-
     def summarise_all(self, **funs):
-        cols = next(self.iter_leafs()).keys()
-        print(cols)
-        new_funs = {'{}_{}'.format(fkey, c): lambda x: print(c) for fkey in funs.keys() for c in cols}
-        return self.summarise(**new_funs)
+        return self.summarise_at(lambda x: True, **funs)
 
-    def _summarise_all(self, **funs):
+    def summarise_at(self, key_filt, **funs):
         new_funs = {}
 
-        fgen = lambda c, f: lambda x: f(x[c])
+        "creates lambda expression with local variable f: function and c: column"
+        def fgen(c, f):
+            return lambda x: f(x[c])
 
-        cols = next(self.iter_leafs()).keys()
+        cols = [c for c in next(self.iter_leafs()).keys() if key_filt(c)]
         for prefix, f in funs.items():
             for c in cols:
                 fun_name = '{}_{}'.format(prefix, c)
@@ -227,6 +219,15 @@ class PuPyG(dict):
                 new_funs[fun_name] = fun
 
         return self.summarise(**new_funs)
+
+    def _summarise(self, **funs):
+        output = PuPyT([
+            {name: fun(table) for name, fun in funs.items()} for key, table in self.items()
+        ])
+        output[self.layer_name] = [k for k in self.keys()]
+        return output
+
+
 
 
 
