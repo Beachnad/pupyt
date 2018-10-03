@@ -1,5 +1,10 @@
 from itertools import groupby
 from datetime import date, datetime, timedelta
+from helper import all_but
+
+
+def grp_hlp(vals, rm):
+    return PuPyT([{ke: va for ke, va in val.items() if ke != rm} for val in list(vals)])
 
 
 class PuPyT(list):
@@ -66,13 +71,19 @@ class PuPyT(list):
         return self._group_by(targets, 0)
 
     def _group_by(self, targets, i):
+        # TODO: find more elegant way for doing the grp_hlp()
         if len(targets) - 1 > i:
-            return PuPyG({k: PuPyT(list(v))._group_by(targets, i + 1)
-                          for k, v in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])},
-                         layer_name=targets[i])
+            return PuPyG(
+                {k: grp_hlp(vals, targets[i])._group_by(targets, i + 1)
+                for k, vals in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])},
+                layer_name=targets[i]
+            )
         else:
-            return PuPyG({k: PuPyT(list(v)) for k, v in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])},
-                         layer_name=targets[i])
+            return PuPyG(
+                {k: grp_hlp(vals, targets[i])
+                 for k, vals in groupby(self.sort_on(targets[i]),key=lambda x: x[targets[i]])},
+                layer_name=targets[i]
+            )
 
     def keys(self):
         return tuple(self[0].keys())

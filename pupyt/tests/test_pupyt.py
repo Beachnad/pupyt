@@ -197,7 +197,8 @@ class TestDev(TestCase):
         summary_output = pupyt_test_sales.\
             group_by(['region', 'product']).\
             _summarise_all(
-                avg=lambda x: sum(x)/len(x)
+                avg=lambda x: sum(x)/len(x),
+                tot=lambda x: sum(x)
             )
         print(summary_output)
 
