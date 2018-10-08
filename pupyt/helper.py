@@ -18,6 +18,7 @@ def is_in(my_list):
         return value in my_list
     return _is_in
 
+
 def all_but(my_list):
     def _all_but(value):
         return value not in my_list

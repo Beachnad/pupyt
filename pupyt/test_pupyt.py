@@ -1,5 +1,5 @@
+from pupyt.helper import starts_with
 from pupyt import PuPyT
-from helper import starts_with
 from unittest import TestCase
 from datetime import datetime
 
@@ -156,7 +156,7 @@ class TestPuPyT(TestCase):
     def test_summarise(self):
         output = pupyt_test.group_by('c').\
             summarise(
-                a=lambda x: x['a'],
+                a=lambda x: sum(x['a']),
                 b=lambda x: sum(x['b'])/x.nrow
             )
 
@@ -166,7 +166,7 @@ class TestPuPyT(TestCase):
             output)
 
         region_sales = pupyt_test_sales.\
-            group_by(['region', 'product']).\
+            group_by('region', 'product').\
             summarise(
                 total_sales=lambda t: sum(t['sales']),
                 avg_sales=  lambda t: sum(t['sales'])/t.nrow
@@ -264,8 +264,6 @@ class TestPuPyT(TestCase):
              {'balance': 250, 'balloons': 1}],
             pupyt_test_dev.select_at(starts_with('bal'))
         )
-
-
 
 
 

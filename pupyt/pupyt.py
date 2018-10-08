@@ -1,6 +1,5 @@
 from itertools import groupby
 from datetime import date, datetime, timedelta
-from helper import all_but
 
 
 def grp_hlp(vals, rm):
@@ -8,6 +7,9 @@ def grp_hlp(vals, rm):
 
 
 class PuPyT(list):
+    # TODO: Comment all of the functions
+    # TODO: make the use of 'vars' or what I sometimes call 'key_filt' more consistent
+
     @property
     def nrow(self):
         return len(self)
@@ -138,12 +140,8 @@ class PuPyT(list):
         return PuPyT({k: self[k] for k in self.iter_at(at_key)})
 
     def sort_on(self, target):
-        # if None in self[target]:
-        #     sorted_index = sorted(range(len(self[target])), key=lambda i:  [self[target][i] is None, self[target][i]])
-        # else:
         temp_sort_list = self.replace_nones_default(target)
         sorted_index = sorted(range(len(temp_sort_list)), key=temp_sort_list.__getitem__)
-        del(temp_sort_list)
         return PuPyT([self[ind] for ind in sorted_index])
 
     ###############################################
