@@ -38,6 +38,11 @@ pupyt_test = PuPyT(test_data)
 pupyt_test_big = PuPyT(big_test_data)
 pupyt_test_II = PuPyT(test_data_II)
 pupyt_test_dev = PuPyT(dict_test_dev)
+pupyt_test_sales = PuPyT({
+    'region': [1, 1, 1, 1, 2, 2, 2, 2],
+    'product': [1, 1, 2, 2, 1, 1, 2, 2],
+    'sales': [100, 50, 75, 90, 45, 235, 165, 20]
+})
 
 
 class TestPuPyT(TestCase):
@@ -128,7 +133,7 @@ class TestPuPyT(TestCase):
              'd': [5, 4, 3, 2, 1]}, pupyt_test.as_dict()
         )
 
-    def test_filter_family(self):
+    def test_filter_at(self):
         self.assertEqual(
             [{'a': 3, 'b': 3, 'c': 1, 'd': 3},
              {'a': 4, 'b': 4, 'c': 2, 'd': 2},
@@ -139,14 +144,7 @@ class TestPuPyT(TestCase):
             [{'X': 0, 'balance': 100, 'balloons': 0, 'name': 'alex'}],
             pupyt_test_dev.filter_at(starts_with('bal'), lambda x: x in (100, 0, 250)))
 
-########################################################################################################################
-pupyt_test_sales = PuPyT({
-    'region': [1, 1, 1, 1, 2, 2, 2, 2],
-    'product': [1, 1, 2, 2, 1, 1, 2, 2],
-    'sales': [100, 50, 75, 90, 45, 235, 165, 20]
-})
-
-class TestDev(TestCase):
+    # MUTATE ###########################################################################################################
     def test_mutate_at(self):
         self.assertEqual(
             [{'X': 0, 'balance': 1000, 'balloons': 0, 'name': 'alex'},
@@ -154,10 +152,11 @@ class TestDev(TestCase):
              {'X': 0, 'balance': 2500, 'balloons': 10, 'name': 'charlie'}]
             , pupyt_test_dev.mutate_at(starts_with('bal'), lambda x: x * 10))
 
+    # SUMMARISE ########################################################################################################
     def test_summarise(self):
-        output = pupyt_test.group_by(['c']).\
+        output = pupyt_test.group_by('c').\
             summarise(
-                a=lambda x: sum(x['a']),
+                a=lambda x: x['a'],
                 b=lambda x: sum(x['b'])/x.nrow
             )
 
@@ -246,3 +245,27 @@ class TestDev(TestCase):
               'region': 2}],
             summary_output_ii
         )
+
+    # SELECT ###########################################################################################################
+    def test_select(self):
+        self.assertEqual(
+            [{'b': 1, 'c': 1},
+             {'b': 2, 'c': 1},
+             {'b': 3, 'c': 1},
+             {'b': 4, 'c': 2},
+             {'b': 5, 'c': 2}],
+            pupyt_test.select('b', 'c')
+        )
+
+    def test_select_at(self):
+        self.assertEqual(
+            [{'balance': 100, 'balloons': 0},
+             {'balance': 200, 'balloons': 2},
+             {'balance': 250, 'balloons': 1}],
+            pupyt_test_dev.select_at(starts_with('bal'))
+        )
+
+
+
+
+

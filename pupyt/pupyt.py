@@ -41,12 +41,15 @@ class PuPyT(list):
         else:
             super(PuPyT, self).__delitem__(key)
 
-    def filter_at(self, vars, funs):
-        filters = []
-        for key in self.select_at(vars):
-            filters.append([funs(x) for x in self[key]])
-        filters = [all(f[i] for f in filters) for i in range(self.nrow)]
-        return self.filter_against(filters)
+    def filter(self, *funs):
+        bool_list = [all(f(r) for f in funs) for r in self]
+        return self.filter_against(bool_list)
+
+    def filter_at(self, at_key, fun):
+        table = PuPyT([
+            r for r in self if all(fun(r[k]) for k in self.iter_at(at_key))
+        ])
+        return table
 
     def filter_against(self, bool_list):
         """
@@ -66,8 +69,11 @@ class PuPyT(list):
         except KeyError:
             return default
 
-    def group_by(self, targets):
-        targets = targets if type(targets) is list else list(targets)
+    def group_by(self, *targets):
+        return self._group_by(targets, 0)
+
+    def group_by_at(self, at_key):
+        targets = [t for t in self.iter_at(at_key)]
         return self._group_by(targets, 0)
 
     def _group_by(self, targets, i):
@@ -117,10 +123,19 @@ class PuPyT(list):
             return self.replace_nones(target ,0)
         raise KeyError('{} not coded for default yet'.format(target_type))
 
-    def select_at(self, vars):
-        for key in self.keys():
-            if vars(key):
-                yield key
+    def iter_at(self, at_key):
+        for k in self.keys():
+            if at_key(k):
+                yield k
+
+    def select(self, *columns):
+        return self._select(lambda x: x in columns)
+
+    def select_at(self, at_key):
+        return self._select(at_key)
+
+    def _select(self, at_key):
+        return PuPyT({k: self[k] for k in self.iter_at(at_key)})
 
     def sort_on(self, target):
         # if None in self[target]:
@@ -226,12 +241,3 @@ class PuPyG(dict):
         ])
         output[self.layer_name] = [k for k in self.keys()]
         return output
-
-
-
-
-
-
-
-
-
