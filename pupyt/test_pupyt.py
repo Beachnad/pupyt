@@ -1,11 +1,15 @@
-from pupyt.helper import starts_with
+from helper import starts_with
 from pupyt import PuPyT
 from unittest import TestCase
+
+
 from datetime import datetime
+
 
 from random import randint
 rand_ints = lambda n:  [randint(1, 10) for _ in range(n)]
 rand_list = lambda n, m: [randint(1, m) for _ in range(n)]
+
 
 test_data = {
     'a': [1, 2, 3, 4, 5],
@@ -41,7 +45,9 @@ pupyt_test_dev = PuPyT(dict_test_dev)
 pupyt_test_sales = PuPyT({
     'region': [1, 1, 1, 1, 2, 2, 2, 2],
     'product': [1, 1, 2, 2, 1, 1, 2, 2],
-    'sales': [100, 50, 75, 90, 45, 235, 165, 20]
+    'sales': [100, 50, 75, 90, 45, 235, 165, 20],
+    'units': [10, 20, 10, 20, 30, 25, 10, 50],
+    'employee': [1, 2, 1, 2, 1, 2, 1, 2]
 })
 
 
@@ -166,17 +172,22 @@ class TestPuPyT(TestCase):
             output)
 
         region_sales = pupyt_test_sales.\
-            group_by('region', 'product').\
+            group_by('region', 'product', 'employee').\
             summarise(
                 total_sales=lambda t: sum(t['sales']),
-                avg_sales=  lambda t: sum(t['sales'])/t.nrow
+                avg_sales=  lambda t: sum(t['sales'])/t.nrow,
+                n = len
             )
 
         self.assertEqual(
-            {1: [{'avg_sales': 75.0, 'product': 1, 'total_sales': 150},
-                 {'avg_sales': 82.5, 'product': 2, 'total_sales': 165}],
-             2: [{'avg_sales': 140.0, 'product': 1, 'total_sales': 280},
-                 {'avg_sales': 92.5, 'product': 2, 'total_sales': 185}]},
+            {1: {1: [{'avg_sales': 100.0, 'employee': 1, 'n': 1, 'total_sales': 100},
+                     {'avg_sales': 50.0, 'employee': 2, 'n': 1, 'total_sales': 50}],
+                 2: [{'avg_sales': 75.0, 'employee': 1, 'n': 1, 'total_sales': 75},
+                     {'avg_sales': 90.0, 'employee': 2, 'n': 1, 'total_sales': 90}]},
+             2: {1: [{'avg_sales': 45.0, 'employee': 1, 'n': 1, 'total_sales': 45},
+                     {'avg_sales': 235.0, 'employee': 2, 'n': 1, 'total_sales': 235}],
+                 2: [{'avg_sales': 165.0, 'employee': 1, 'n': 1, 'total_sales': 165},
+                     {'avg_sales': 20.0, 'employee': 2, 'n': 1, 'total_sales': 20}]}},
             region_sales
         )
 
@@ -264,6 +275,5 @@ class TestPuPyT(TestCase):
              {'balance': 250, 'balloons': 1}],
             pupyt_test_dev.select_at(starts_with('bal'))
         )
-
 
 

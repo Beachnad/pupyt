@@ -154,11 +154,18 @@ class PuPyT(list):
     def as_dict(self):
         return dict(self.items())
 
+    ### MERGING / JOINING ###
     def union(self, other):
         other = other if type(other) is PuPyT else PuPyT(other)
         assert set(self.keys()) == set(other.keys())
         self.extend(other)
         return self
+
+    def left_join(self, other, join_key):
+        assert set(self.keys()).isdisjoint(set(other.keys()))
+
+
+
 
     ##### DEV AREA ########
     def mutate_at(self, vars, funs):
@@ -173,6 +180,8 @@ class PuPyT(list):
             if vars(key):
                 self[key] = [funs(x) for x in self[key]]
         return self
+
+
 
 
 class PuPyG(dict):
@@ -204,7 +213,7 @@ class PuPyG(dict):
                 return fun(self)
             children_types = (self.child_type, val.child_type)
 
-            if all(type(c) is PuPyG for c in children_types):
+            if all(c is PuPyG for c in children_types):
                 val.peal(fun)
             elif children_types[1] is PuPyT:
                 self[key] = fun(val)
